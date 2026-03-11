@@ -1,213 +1,156 @@
 #include <iostream>
 #include <ctime>
-#include <cstdlib>
-
 using namespace std;
 
 void printArray(int arr[], int n)
 {
-    for(int i=0;i<n;i++)
-        cout<<arr[i]<<" ";
-    cout<<endl;
+    for(int i=0; i<n; i++)
+        cout << arr[i] << " ";
+    cout << endl;
 }
 
-////////////////////////
-// Bubble Sort Steps
-////////////////////////
 void bubbleSortSteps(int arr[], int n)
 {
-    cout<<"\nBubble Sort Steps:\n";
-
-    for(int i=0;i<n-1;i++)
+    cout << "\nBubble Sort Steps:\n";
+    for(int i=0; i<n-1; i++)
     {
-        for(int j=0;j<n-i-1;j++)
+        for(int j=0; j<n-i-1; j++)
         {
-            if(arr[j]>arr[j+1])
-                swap(arr[j],arr[j+1]);
+            if(arr[j] > arr[j+1])
+                swap(arr[j], arr[j+1]);
         }
-
-        cout<<"Pass "<<i+1<<": ";
-        printArray(arr,n);
+        cout << "Pass " << i+1 << ": ";
+        printArray(arr, n);
     }
 }
 
-////////////////////////
-// Insertion Sort Steps
-////////////////////////
 void insertionSortSteps(int arr[], int n)
 {
-    cout<<"\nInsertion Sort Steps:\n";
-
-    for(int i=1;i<n;i++)
+    cout << "\nInsertion Sort Steps:\n";
+    for(int i=1; i<n; i++)
     {
-        int key=arr[i];
-        int j=i-1;
-
-        while(j>=0 && arr[j]>key)
+        int key = arr[i];
+        int j = i-1;
+        while(j >= 0 && arr[j] > key)
         {
-            arr[j+1]=arr[j];
+            arr[j+1] = arr[j];
             j--;
         }
-
-        arr[j+1]=key;
-
-        cout<<"Step "<<i<<": ";
-        printArray(arr,n);
+        arr[j+1] = key;
+        cout << "Step " << i << ": ";
+        printArray(arr, n);
     }
 }
 
-////////////////////////
-// Quick Sort
-////////////////////////
-int partition(int arr[], int low, int high)
+void merge(int arr[], int l, int m, int r, int n)
 {
-    int pivot=arr[high];
-    int i=low-1;
+    int i = l, j = m+1, k = 0;
+    int temp[100];
 
-    for(int j=low;j<high;j++)
+    while(i <= m && j <= r)
     {
-        if(arr[j]<pivot)
+        if(arr[i] < arr[j])
+            temp[k++] = arr[i++];
+        else
+            temp[k++] = arr[j++];
+    }
+    while(i <= m) temp[k++] = arr[i++];
+    while(j <= r) temp[k++] = arr[j++];
+
+    for(i = l, k = 0; i <= r; i++, k++)
+        arr[i] = temp[k];
+
+    cout << "Merge Step: ";
+    printArray(arr, n);
+}
+
+void mergeSort(int arr[], int l, int r, int n)
+{
+    if(l < r)
+    {
+        int m = (l + r) / 2;
+        mergeSort(arr, l, m, n);
+        mergeSort(arr, m+1, r, n);
+        merge(arr, l, m, r, n);
+    }
+}
+
+int partition(int arr[], int low, int high, int n)
+{
+    int pivot = arr[high];
+    int i = low - 1;
+    for(int j = low; j < high; j++)
+    {
+        if(arr[j] < pivot)
         {
             i++;
-            swap(arr[i],arr[j]);
+            swap(arr[i], arr[j]);
         }
     }
-
-    swap(arr[i+1],arr[high]);
-
+    swap(arr[i+1], arr[high]);
+    cout << "Partition Step: ";
+    printArray(arr, n);
     return i+1;
 }
 
-void quickSort(int arr[], int low, int high)
+void quickSort(int arr[], int low, int high, int n)
 {
-    if(low<high)
+    if(low < high)
     {
-        int pi=partition(arr,low,high);
-
-        quickSort(arr,low,pi-1);
-        quickSort(arr,pi+1,high);
+        int pi = partition(arr, low, high, n);
+        quickSort(arr, low, pi-1, n);
+        quickSort(arr, pi+1, high, n);
     }
 }
 
-////////////////////////
-// Merge Sort
-////////////////////////
-void merge(int arr[], int l, int m, int r)
-{
-    int i=l,j=m+1,k=0;
-    int temp[100];
-
-    while(i<=m && j<=r)
-    {
-        if(arr[i]<arr[j])
-            temp[k++]=arr[i++];
-        else
-            temp[k++]=arr[j++];
-    }
-
-    while(i<=m) temp[k++]=arr[i++];
-    while(j<=r) temp[k++]=arr[j++];
-
-    for(i=l,k=0;i<=r;i++,k++)
-        arr[i]=temp[k];
-}
-
-void mergeSort(int arr[], int l, int r)
-{
-    if(l<r)
-    {
-        int m=(l+r)/2;
-
-        mergeSort(arr,l,m);
-        mergeSort(arr,m+1,r);
-
-        merge(arr,l,m,r);
-    }
-}
-
-////////////////////////
-// Main
-////////////////////////
 int main()
 {
-    int demo[]={5,3,8,4,2};
-    int n=5;
+    int demo[] = {5, 3, 8, 4, 2};
+    int n = 5;
 
-    cout<<"Original Array:\n";
-    printArray(demo,n);
+    cout << "Original Array:\n";
+    printArray(demo, n);
 
-    int a[5],b[5],c[5],d[5];
+    int a[5], b[5], c[5], d[5];
+    for(int i=0; i<n; i++)
+        a[i] = b[i] = c[i] = d[i] = demo[i];
 
-    for(int i=0;i<n;i++)
-    {
-        a[i]=b[i]=c[i]=d[i]=demo[i];
-    }
+    // Bubble Sort steps + timing
+    clock_t start = clock();
+    bubbleSortSteps(a, n);
+    clock_t end = clock();
+    double time_bubble = double(end - start) / CLOCKS_PER_SEC;
 
-    bubbleSortSteps(a,n);
-    insertionSortSteps(b,n);
+    // Insertion Sort steps + timing
+    start = clock();
+    insertionSortSteps(b, n);
+    end = clock();
+    double time_insertion = double(end - start) / CLOCKS_PER_SEC;
 
-    cout<<"\nMerge Sort Result:\n";
-    mergeSort(c,0,n-1);
-    printArray(c,n);
+    // Merge Sort steps + timing
+    start = clock();
+    cout << "\nMerge Sort Steps:\n";
+    mergeSort(c, 0, n-1, n);
+    cout << "Final Merge Sort Result: ";
+    printArray(c, n);
+    end = clock();
+    double time_merge = double(end - start) / CLOCKS_PER_SEC;
 
-    cout<<"\nQuick Sort Result:\n";
-    quickSort(d,0,n-1);
-    printArray(d,n);
+    // Quick Sort steps + timing
+    start = clock();
+    cout << "\nQuick Sort Steps:\n";
+    quickSort(d, 0, n-1, n);
+    cout << "Final Quick Sort Result: ";
+    printArray(d, n);
+    end = clock();
+    double time_quick = double(end - start) / CLOCKS_PER_SEC;
 
-    ///////////////////////////
-    // Time Complexity Test
-    ///////////////////////////
-
-    cout<<"\n\n===== Time Test =====\n";
-
-    int size=5000;
-
-    int arr1[size],arr2[size],arr3[size],arr4[size];
-
-    for(int i=0;i<size;i++)
-    {
-        int num=rand()%10000;
-        arr1[i]=arr2[i]=arr3[i]=arr4[i]=num;
-    }
-
-    clock_t start,end;
-
-    start=clock();
-    for(int i=0;i<size-1;i++)
-        for(int j=0;j<size-i-1;j++)
-            if(arr1[j]>arr1[j+1])
-                swap(arr1[j],arr1[j+1]);
-    end=clock();
-
-    cout<<"Bubble Sort Time: "<<(double)(end-start)/CLOCKS_PER_SEC<<" sec\n";
-
-    start=clock();
-    for(int i=1;i<size;i++)
-    {
-        int key=arr2[i];
-        int j=i-1;
-        while(j>=0 && arr2[j]>key)
-        {
-            arr2[j+1]=arr2[j];
-            j--;
-        }
-        arr2[j+1]=key;
-    }
-    end=clock();
-
-    cout<<"Insertion Sort Time: "<<(double)(end-start)/CLOCKS_PER_SEC<<" sec\n";
-
-    start=clock();
-    mergeSort(arr3,0,size-1);
-    end=clock();
-
-    cout<<"Merge Sort Time: "<<(double)(end-start)/CLOCKS_PER_SEC<<" sec\n";
-
-    start=clock();
-    quickSort(arr4,0,size-1);
-    end=clock();
-
-    cout<<"Quick Sort Time: "<<(double)(end-start)/CLOCKS_PER_SEC<<" sec\n";
+    // 印時間（小數點）
+    cout << "\n\n===== Empirical Time Test (seconds) =====\n";
+    cout << "Bubble Sort Time: " << time_bubble << " sec\n";
+    cout << "Insertion Sort Time: " << time_insertion << " sec\n";
+    cout << "Merge Sort Time: " << time_merge << " sec\n";
+    cout << "Quick Sort Time: " << time_quick << " sec\n";
 
     return 0;
 }
