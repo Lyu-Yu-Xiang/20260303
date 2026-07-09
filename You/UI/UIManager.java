@@ -8,7 +8,15 @@ import java.awt.*;
 import status.StoryManager;
 import status.StoryNode;
 
+
+
+
 public class UIManager extends JPanel implements Runnable {
+  private java.util.List<JButton> currentStoryButtons = new java.util.ArrayList<>();
+    private java.util.List<StoryNode.StoryOption> currentStoryOptions = new java.util.ArrayList<>();
+    private Runnable refreshCell3UI;
+
+
 
     // 畫面寬度與高度
     private static final int SCREEN_WIDTH = 800;
@@ -45,7 +53,7 @@ public class UIManager extends JPanel implements Runnable {
 
         // 加一些測試按鈕
         Dimension buttonSize = new Dimension(150, 40);
-        for(int i = 1; i <= 10; i++) {
+        for(int i = 1; i <= 1; i++) {
             JButton btn = new JButton("Instant 行動 " + i);
             btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40)); // 讓按鈕寬度自動拉滿整列
             cell1.add(btn);
@@ -103,7 +111,7 @@ public class UIManager extends JPanel implements Runnable {
         JPanel areaContent = new JPanel();
         areaContent.setLayout(new BoxLayout(areaContent, BoxLayout.Y_AXIS));
 
-        for(int i = 1; i <= 5; i++) {
+        for(int i = 1; i <= 1; i++) {
             JButton btn = new JButton("Area 行動 " + i);
             btn.setPreferredSize(buttonSize);
             btn.setMinimumSize(buttonSize);
@@ -143,61 +151,36 @@ public class UIManager extends JPanel implements Runnable {
         JPanel homeContent = new JPanel();
         homeContent.setLayout(new BoxLayout(homeContent, BoxLayout.Y_AXIS));
 
-        // 🧠 建立專門刷劇情的自動化大腦 (注意：要在外層宣告為 Runnable)
-        Runnable refreshCell3UI = new Runnable() {
+        // 🧠 核心修正：把原本前面的 Runnable 拿掉！直接賦值給剛剛宣告的全域變數
+        refreshCell3UI = new Runnable() {
             @Override
             public void run() {
-                homeContent.removeAll(); // 1. 先清空舊按鈕
+                homeContent.removeAll(); 
+                currentStoryButtons.clear();
+                currentStoryOptions.clear();
 
-                // 2. 向 status 包裡的 StoryManager 拿尋當前劇情的資料
                 StoryNode currentNode = StoryManager.getInstance().getCurrentNode();
 
                 if (currentNode != null) {
-                    // 3. 自動把這一幕的所有選項印成按鈕
                     for (StoryNode.StoryOption option : currentNode.getOptions()) {
                         JButton btn = new JButton(option.text);
                         btn.setPreferredSize(buttonSize); btn.setMinimumSize(buttonSize); btn.setMaximumSize(buttonSize);
                         btn.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-                        // ⭐ 【核心判定：檢查 condition】
-                        if (option.condition != null && !option.condition.get()) {
-                            // ❌ 判定失敗：按鈕變灰色不能點，並換上失敗提示
-                            btn.setEnabled(false); 
-                            btn.setToolTipText(option.failDescription);
-                        } else {
-                            // 🟢 判定成功：可以點，用你最喜歡的黑底樣式顯示劇情描述
-                            btn.setEnabled(true);
-                            
-                            // 這裡動態代入目前 DataManager 的數值來還原你的 ToolTip 畫面
-                            // 備註：你現有的 action 可以用 DataManager.getInstance().getPlayerStats().getAction().getCurrent() 抓取
-                            double currentAction = status.DataManager.getInstance().getPlayerStats().getAction().getCurrent();
-                            double maxAction = status.DataManager.getInstance().getPlayerStats().getAction().getMax();
-
-                            btn.setToolTipText(
-                                "<html>" +
-                                "<div style='background-color: #2D2D2D; color: #E0E0E0; padding: 12px 15px; font-family: \"Microsoft YaHei\", sans-serif; font-size: 14px; border: 1px solid #1A1A1A; line-height: 1.4;'>" +
-                                    "<b style='font-size: 18px; color: #FFFFFF;'>" + option.text + "</b><br>" +
-                                    "<i style='color: #B5B5B5; display: inline-block; margin-top: 4px; margin-bottom: 4px;'>" + currentNode.getDescription() + "</i><br>" +
-                                    "<span style='color: #8A8A8A;'>&lt;&lt; 狀態 &gt;&gt;</span><br>" +
-                                    "<span style='color: #FF5A5A;'>當前行動力：" + (int)currentAction + " / " + (int)maxAction + "</span><br>" +
-                                "</div>" +
-                                "</html>"
-                            );
-                            
-                            // 點擊事件
-                            btn.addActionListener(e -> {
-                                if (option.action != null) option.action.run(); // 執行按鈕特殊效果
-                                StoryManager.getInstance().setCurrentNodeId(option.targetNodeId); // 跳到下一幕
-                                run(); // 自我重刷，畫面一秒切換！
-                            });
-                        }
+                        btn.addActionListener(e -> {
+                            if (option.action != null) option.action.run(); 
+                            StoryManager.getInstance().setCurrentNodeId(option.targetNodeId); 
+                            run(); 
+                        });
 
                         homeContent.add(btn);
                         homeContent.add(Box.createVerticalStrut(5));
+
+                        currentStoryButtons.add(btn);
+                        currentStoryOptions.add(option);
                     }
                 }
 
-                // 4. 刷新畫面三部曲
                 homeContent.revalidate();
                 homeContent.repaint();
             }
@@ -206,17 +189,30 @@ public class UIManager extends JPanel implements Runnable {
         // ⚡ 初始點火跑第一次
         refreshCell3UI.run();
 
-        // 🎁 打包成折疊面板加進 cell3
-        CollapsiblePanel homeSection = createCollapsibleSection("家", homeContent);
-        gbc3.gridy = 0; cell3.add(homeSection, gbc3);
+        // =============================================================
+        // 🟢 這裡就是漏掉的關鍵屁股！把東西真正裝進畫面上
+        // =============================================================
+        // 1. 用你原本的自訂類別，把裝有按鈕的盒子打包成名為「家」的折疊面板
+        CollapsiblePanel homeSection = new CollapsiblePanel("家", homeContent);
         
-        // 置頂墊片
-        gbc3.gridy = 1; gbc3.weighty = 1; cell3.add(Box.createGlue(), gbc3);
+        // 2. 把折疊面板塞進 cell3 的第一列 (gridy = 0)
+        gbc3.gridy = 0; 
+        cell3.add(homeSection, gbc3);
 
+        // 3. 在下方塞一個彈性置頂墊片，把折疊面板往上推，維持排版美觀
+        gbc3.gridy = 1; 
+        gbc3.weighty = 1; 
+        cell3.add(Box.createGlue(), gbc3);
+
+        // 4. 把 cell3 丟進滾動面板裡，最後交給中央主要面板
         JScrollPane scroll3 = new JScrollPane(cell3);
         scroll3.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        
+        // 💡 註：因為 update 裡已經用 this.revalidate() 全域刷新了，
+        // 這裡只要確保 scroll3 有順利加到你的中央佈局（通常是裝這四格的容器）即可。
+        // 如果你原本的寫法是 centerPanel.add(scroll3);，請保留它：
         centerPanel.add(scroll3);
-
+       
 
 
         // ===== 第 4 格 (Next Action) =====
@@ -238,63 +234,102 @@ public class UIManager extends JPanel implements Runnable {
         // 最後，把整個 5 大列的總面板，放到主畫面的正中央
         this.add(centerPanel, BorderLayout.CENTER);
 
-                // 1. 建立這個空白框架
-            StatusSidebar sidebar = new StatusSidebar();
+          // =============================================================
+        // 側邊欄狀態配置 (顯示 行動力 與 命運)
+        // =============================================================
+        // 1. 建立側邊欄框架與內容大盒子
+        StatusSidebar sidebar = new StatusSidebar();
+        sidebar.setBorder(BorderFactory.createEmptyBorder(50, 0, 0, 0));
+        
+        JPanel myEquipment = new JPanel();
+        myEquipment.setLayout(new BoxLayout(myEquipment, BoxLayout.Y_AXIS));
 
-            // ⭐ 加這行（調整位置用）
-            sidebar.setBorder(BorderFactory.createEmptyBorder(50, 0, 0, 0));
-            JPanel myEquipment = new JPanel();
-            myEquipment.setLayout(new BoxLayout(myEquipment, BoxLayout.Y_AXIS));
+        // -------------------------------------------------------------
+        // ⚡ 【行動力進度條】
+        // -------------------------------------------------------------
+        int maxAction = (int) DataManager.getInstance().getPlayerStats().getAction().getMax();
+        JProgressBar swordBar = new JProgressBar(0, maxAction) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                double currentVal = DataManager.getInstance().getPlayerStats().getAction().getCurrent();
+                double maxVal = DataManager.getInstance().getPlayerStats().getAction().getMax();
+                
+                setValue((int) currentVal);
+                super.paintComponent(g);
+                
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                g2d.setColor(Color.BLACK);
+                g2d.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+                
+                int width = getWidth(); int height = getHeight();
+                FontMetrics fm = g2d.getFontMetrics();
+                int textY = (height - fm.getHeight()) / 2 + fm.getAscent();
+                
+                g2d.drawString("行動", 5, textY);
+                String valueText = String.format("%.2f/%.0f", currentVal, maxVal);
+                int textX = width - fm.stringWidth(valueText) - 5;
+                g2d.drawString(valueText, textX, textY);
+            }
+        };
+        // 設定行動條外觀
+        swordBar.setBackground(new Color(240, 240, 240));
+        swordBar.setForeground(new Color(255, 182, 193));
+        swordBar.setStringPainted(false);
+        swordBar.setBorder(BorderFactory.createEmptyBorder());
+        swordBar.setPreferredSize(new Dimension(180, 25));
+        swordBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
+        
+        myEquipment.add(swordBar);
+        myEquipment.add(Box.createVerticalStrut(8)); // 兩條狀態列之間的間距
 
-            // 1. 建立自訂進度條，重寫 paintComponent 改向 playerStats 即時拿數據
-          int maxAction = (int) DataManager.getInstance().getPlayerStats().getAction().getMax();
-            JProgressBar swordBar = new JProgressBar(0, maxAction) {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    // ⭐ 【關鍵連動】即時向數據層同步最新的整數值，讓粉紅色條能隨時間前進
-                  // 直接去全域中心撈出當前的精準行動值
-                   double currentVal = DataManager.getInstance().getPlayerStats().getAction().getCurrent();
-                    double maxVal = DataManager.getInstance().getPlayerStats().getAction().getMax();
-                    
-                    setValue((int) currentVal); // 更新進度條長度
-                    // 繪製原有的粉紅條背景
-                    super.paintComponent(g);
-                    
-                    Graphics2D g2d = (Graphics2D) g;
-                    g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                    
-                    g2d.setColor(Color.BLACK);
-                    g2d.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-                    
-                    int width = getWidth();
-                    int height = getHeight();
-                    FontMetrics fm = g2d.getFontMetrics();
-                    int textY = (height - fm.getHeight()) / 2 + fm.getAscent();
-                    
-                    // 繪製左側文字
-                    g2d.drawString("行動", 5, textY);
-                    
-                    // ⭐ 【關鍵連動】這裡改成顯示精準帶有小數點的文字（例如 5.58/11.0）
-                    // String.format("%.2f") 可以幫你把小數點控制在兩位數，跟截圖一模一樣！
-                    String valueText = String.format("%.2f/%.0f", currentVal, playerStats.getAction().getMax());
-                    int textX = width - fm.stringWidth(valueText) - 5;
-                    g2d.drawString(valueText, textX, textY);
-                }
-            };
+        // -------------------------------------------------------------
+        // 🌟 新增：【命運進度條】
+        // -------------------------------------------------------------
+        int maxFate = (int) DataManager.getInstance().getPlayerStats().getFate().getMax();
+        JProgressBar fateBar = new JProgressBar(0, maxFate) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                // 向 DataManager 撈取最新的命運數值
+                double currentVal = DataManager.getInstance().getPlayerStats().getFate().getCurrent();
+                double maxVal = DataManager.getInstance().getPlayerStats().getFate().getMax();
+                
+                // 動態同步進度條的最大值與目前值
+                setMaximum((int) maxVal);
+                setValue((int) currentVal);
+                super.paintComponent(g);
+                
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                g2d.setColor(Color.BLACK);
+                g2d.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+                
+                int width = getWidth(); int height = getHeight();
+                FontMetrics fm = g2d.getFontMetrics();
+                int textY = (height - fm.getHeight()) / 2 + fm.getAscent();
+                
+                // 繪製左邊字樣
+                g2d.drawString("命運", 5, textY);
+                // 繪製右邊帶小數點的精準數據
+                String valueText = String.format("%.2f/%.0f", currentVal, maxVal);
+                int textX = width - fm.stringWidth(valueText) - 5;
+                g2d.drawString(valueText, textX, textY);
+            }
+        };
+        // 設定命運條外觀（採用柔和的淺藍色）
+        fateBar.setBackground(new Color(240, 240, 240)); 
+        fateBar.setForeground(new Color(173, 216, 230)); 
+        fateBar.setStringPainted(false); 
+        fateBar.setBorder(BorderFactory.createEmptyBorder()); 
+        fateBar.setPreferredSize(new Dimension(180, 25));
+        fateBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25)); 
+        
+        myEquipment.add(fateBar);
 
-            // 2. 設定進度條外觀（維持原樣）
-            swordBar.setBackground(new Color(240, 240, 240)); 
-            swordBar.setForeground(new Color(255, 182, 193)); 
-            swordBar.setStringPainted(false); 
-            swordBar.setBorder(BorderFactory.createEmptyBorder()); 
-            swordBar.setPreferredSize(new Dimension(180, 25));
-            swordBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25)); 
-
-            // 3. 裝進面板並加入側邊欄
-            myEquipment.add(swordBar);
-            CollapsiblePanel equipSection = new CollapsiblePanel("能量", myEquipment);
-            sidebar.addSection(equipSection);
-            this.add(sidebar, BorderLayout.EAST);
+        // 3. 打包裝進面板並加入側邊欄
+        CollapsiblePanel equipSection = new CollapsiblePanel("能量", myEquipment);
+        sidebar.addSection(equipSection);
+        this.add(sidebar, BorderLayout.EAST);
     }
 
     
@@ -327,11 +362,58 @@ public class UIManager extends JPanel implements Runnable {
     }
     
 
-    // 【步驟 1】更新遊戲邏輯（例如：角色移動、碰撞偵測）
+// 【步驟 1】更新遊戲邏輯
     private void update() {
-        // 新手任務：之後你的遊戲邏輯程式碼要寫在這裡！
         playerStats.updateRecovery();
         DataManager.getInstance().getPlayerStats().updateRecovery();
+
+        // 🌟 強制喚醒：不使用 centerPanel，改用 Swing 最頂層的 this (也就是 UIManager 本身) 來重新排版
+        if (currentStoryButtons.isEmpty() && refreshCell3UI != null) {
+            refreshCell3UI.run();
+            
+            // 💡 修正：直接叫 UIManager 本身重新布局與重繪，保證全畫面重新整理
+            this.revalidate();
+            this.repaint();
+        }
+
+        // 劇情控制大腦：每幀即時檢查按鈕狀態與動態更新 ToolTip
+        StoryNode currentNode = StoryManager.getInstance().getCurrentNode();
+        if (currentNode != null) {
+            
+            for (int i = 0; i < currentStoryButtons.size(); i++) {
+                if (i >= currentStoryOptions.size()) break;
+
+                JButton btn = currentStoryButtons.get(i);
+                StoryNode.StoryOption option = currentStoryOptions.get(i);
+
+                // 🧠 檢查條件是否通過
+                boolean isAvailable = (option.condition == null) || option.condition.get();
+
+                // 1. 控管按鈕能不能點
+                if (btn.isEnabled() != isAvailable) {
+                    btn.setEnabled(isAvailable);
+                }
+
+                // 2. 控管滑鼠指上去的 ToolTip
+                double currentFate = DataManager.getInstance().getPlayerStats().getFate().getCurrent();
+                double maxFate = DataManager.getInstance().getPlayerStats().getFate().getMax();
+
+                btn.setToolTipText(
+                    "<html>" +
+                    "<div style='background-color: #2D2D2D; color: #E0E0E0; padding: 12px 15px; font-family: \"Microsoft YaHei\", sans-serif; font-size: 14px; border: 1px solid #1A1A1A; line-height: 1.4;'>" +
+                        "<b style='font-size: 18px; color: #FFFFFF;'>" + option.text + "</b><br>" +
+                        "<i style='color: #B5B5B5; display: inline-block; margin-top: 4px; margin-bottom: 4px;'>" + currentNode.getDescription() + "</i><br>" +
+                        "<span style='color: #8A8A8A;'>&lt;&lt; 花費 &gt;&gt;</span><br>" +
+                        (isAvailable ? 
+                        "<span style='color: #5AFF5A;'>命運 : -4 (" + String.format("%.2f", currentFate) + " / " + (int)maxFate + ") 【可執行】</span><br>" : 
+                        "<span style='color: #FF5A5A;'>命運 : -4 (" + String.format("%.2f", currentFate) + " / " + (int)maxFate + ") 【無法執行】</span><br>") +
+                        "<span style='color: #8A8A8A;'>[完成效果]</span><br>" +
+                        "<span style='color: #E0E0E0;'>命運 上限 : +5</span>" +
+                    "</div>" +
+                    "</html>"
+                );
+            }
+        }
     }
 
     // 【步驟 2】繪製遊戲畫面
