@@ -22,6 +22,14 @@ public class StatusProperty {
         }
         return false;
     }
+    // 🌟 新增：讓劇情事件可以動態調整上限（例如：命運上限 +5）
+    public void setMax(double newMax) {
+        this.max = newMax;
+        // 如果當前值因為上限縮水而超過了，就強制拉回最大值
+        if (this.current > this.max) {
+            this.current = this.max;
+        }
+    }
 
     public double getCurrent() { return current; }
     public double getMax() { return max; }
